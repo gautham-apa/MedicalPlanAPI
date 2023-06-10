@@ -1,0 +1,99 @@
+{
+	"info": {
+		"_postman_id": "57d281dd-0570-43d6-bbfa-2f4f99d09215",
+		"name": "MedicalPlan",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "25401710"
+	},
+	"item": [
+		{
+			"name": "get_all_plans",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "If-None-Match",
+						"value": "{{etag}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "localhost:8080/all_plans",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"all_plans"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create_plan",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\"planCostShares\": {\n\"deductible\": 2000,\n\"_org\": \"example.com\",\n\"copay\": 23,\n\"objectId\": \"1234vxc2324sdf-501\",\n\"objectType\": \"membercostshare\"\n},\n\"linkedPlanServices\": [{\n\"linkedService\": {\n\"_org\": \"example.com\",\n\"objectId\": \"1234520xvc30asdf-502\",\n\"objectType\": \"service\",\n\"name\": \"Yearly physical\"\n},\n\"planserviceCostShares\": {\n\"deductible\": 10,\n\"_org\": \"example.com\",\n\"copay\": 0,\n\"objectId\": \"1234512xvc1314asdfs-503\",\n\"objectType\": \"membercostshare\"\n},\n\"_org\": \"example.com\",\n\"objectId\": \"27283xvx9asdff-504\",\n\"objectType\": \"planservice\"\n}, {\n\"linkedService\": {\n\"_org\": \"example.com\",\n\"objectId\": \"1234520xvc30sfs-505\",\n\"objectType\": \"service\",\n\"name\": \"well baby\"\n},\n\"planserviceCostShares\": {\n\"deductible\": 10,\n\"_org\": \"example.com\",\n\"copay\": 175,\n\"objectId\": \"1234512xvc1314sdfsd-506\",\n\"objectType\": \"membercostshare\"\n},\n\"_org\": \"example.com\",\n\"objectId\": \"27283xvx9sdf-507\",\n\"objectType\": \"planservice\"\n}],\n\"_org\": \"example.com\",\n\"objectId\": \"12xvxc345ssdsds-507\",\n\"objectType\": \"plan\",\n\"planType\": \"inNetwork\",\n\"creationDate\": \"12-12-2017\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:8080/create_plan",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"create_plan"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get_plan",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/plan/{{objectId}}",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"plan",
+						"{{objectId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete_plan",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/delete_plan/{{objectId}}",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"delete_plan",
+						"{{objectId}}"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
