@@ -8,6 +8,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 @Configuration
 @EnableRedisRepositories
@@ -30,5 +32,8 @@ public class RedisStoreConfig {
         return template;
     }
 
-
+    @Bean
+    public Jedis getJedis(){
+        return new JedisPool().getResource();
+    }
 }
