@@ -1,5 +1,6 @@
 package com.hari.MedicalPlan.service;
 
+import com.hari.MedicalPlan.config.MessagingConfig;
 import com.hari.MedicalPlan.dao.CommonDAO;
 import com.hari.MedicalPlan.dao.MedicationPlanDAO;
 import com.hari.MedicalPlan.helper.Utility;
@@ -8,6 +9,7 @@ import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,9 +26,10 @@ public class MedicationPlanService {
     private MedicationPlanDAO planDAO;
     @Autowired
     private CommonDAO commonDAO;
-
     @Autowired
     private Jedis jedis;
+    @Autowired
+    private RabbitTemplate template;
 
 
     public ResponseEntity createPlan(String plan) throws Exception {
@@ -37,7 +40,8 @@ public class MedicationPlanService {
             schema.validate(planObject);
         }
 
-        planDAO.create(planObject, planObject.getString("objectId"));
+        insertIntoKeyStoreAndConvertToMap(new JSONObject(plan));
+        template.convertAndSend(MessagingConfig.MESSAGE_EXCHANGE_NAME, MessagingConfig.ROUTING_KEY, new IndexingMessage("CREATE", new JSONObject(plan).toString()));
         String newEtag = Utility.generateHash(plan);
         commonDAO.insertEtag(newEtag);
         HttpHeaders headers = new HttpHeaders();
@@ -80,6 +84,9 @@ public class MedicationPlanService {
         if(!jedis.exists("plan:"+id)) {
             return new ResponseEntity("Plan does not exist", HttpStatus.NOT_FOUND);
         }
+        Map<String, Object> oldPlan = getMap("plan:"+id, new HashMap<>());
+        template.convertAndSend(MessagingConfig.MESSAGE_EXCHANGE_NAME, MessagingConfig.ROUTING_KEY, new IndexingMessage("DELETE", new JSONObject(oldPlan).toString()));
+
         deletePlanHelper("plan:"+id, new HashMap<>());
         String newEtag = Utility.generateRandom256BitString();
         commonDAO.insertEtag(newEtag);
@@ -88,15 +95,26 @@ public class MedicationPlanService {
         return new ResponseEntity(headers, HttpStatus.OK);
     }
 
-    public ResponseEntity updatePlan(String objectId, String plan, List<String> ifMatchEtag) {
+    public ResponseEntity updatePlan(String objectId, String plan, List<String> ifMatchEtag) throws Exception {
         if(ifMatchEtag == null || ifMatchEtag.size() == 0) {
             return new ResponseEntity("if-match etag is missing", HttpStatus.BAD_REQUEST);
         }
         if(!etagMatches(ifMatchEtag)) {
             return new ResponseEntity("Resource has been modified by another user", HttpStatus.BAD_REQUEST);
         }
+        if(!jedis.exists("plan:"+objectId)) {
+            return new ResponseEntity("Plan does not exist", HttpStatus.NOT_FOUND);
+        }
+
+        try (InputStream inputStream = getClass().getResourceAsStream("/MedicalPlanSchema.json")) {
+            JSONObject rawSchema = new JSONObject(new JSONTokener(inputStream));
+            Schema schema = SchemaLoader.load(rawSchema);
+            schema.validate(plan);
+        }
+
         deletePlan(objectId, ifMatchEtag);
         Map<String, Map<String, Object>> map = insertIntoKeyStoreAndConvertToMap(new JSONObject(plan));
+        template.convertAndSend(MessagingConfig.MESSAGE_EXCHANGE_NAME, MessagingConfig.ROUTING_KEY, new IndexingMessage("CREATE", new JSONObject(plan).toString()));
         String newEtag = Utility.generateHash(fetchAllPlans().toString());
         commonDAO.insertEtag(newEtag);
         HttpHeaders headers = new HttpHeaders();
@@ -114,14 +132,26 @@ public class MedicationPlanService {
     }
 
 
-    public ResponseEntity updatePlanFields(String objectId, String updatedFields, List<String> ifMatchEtag) {
+    public ResponseEntity updatePlanFields(String objectId, String updatedFields, List<String> ifMatchEtag) throws Exception {
         if(ifMatchEtag == null || ifMatchEtag.size() == 0) {
             return new ResponseEntity("if-match etag is missing", HttpStatus.BAD_REQUEST);
         }
         if(!etagMatches(ifMatchEtag)) {
             return new ResponseEntity("Resource has been modified by another user", HttpStatus.BAD_REQUEST);
         }
+
+        if(!jedis.exists("plan:"+objectId)) {
+            return new ResponseEntity("Plan does not exist", HttpStatus.NOT_FOUND);
+        }
+
+        try (InputStream inputStream = getClass().getResourceAsStream("/MedicalPlanSchema.json")) {
+            JSONObject rawSchema = new JSONObject(new JSONTokener(inputStream));
+            Schema schema = SchemaLoader.load(rawSchema);
+            schema.validate(new JSONObject(updatedFields));
+        }
+
         Map<String, Map<String, Object>> map = insertIntoKeyStoreAndConvertToMap(new JSONObject(updatedFields));
+        template.convertAndSend(MessagingConfig.MESSAGE_EXCHANGE_NAME, MessagingConfig.ROUTING_KEY, new IndexingMessage("CREATE", new JSONObject(updatedFields).toString()));
         String newEtag = Utility.generateHash(fetchAllPlans().toString());
         commonDAO.insertEtag(newEtag);
         HttpHeaders headers = new HttpHeaders();
@@ -200,7 +230,6 @@ public class MedicationPlanService {
         }
         return resultMap;
     }
-
 
 
     private Map<String, Object> deletePlanHelper(String redisKey, Map<String, Object> resultMap) {

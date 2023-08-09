@@ -1,5 +1,7 @@
 package com.hari.MedicalPlan.controller;
 
+import com.hari.MedicalPlan.config.MessagingConfig;
+import com.hari.MedicalPlan.service.IndexingMessage;
 import com.hari.MedicalPlan.service.MedicationPlanService;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +32,7 @@ public class MedicationPlanController {
 
     @PostMapping("/create_plan")
     public ResponseEntity createPlan(@RequestBody String plan) throws Exception {
-        return new ResponseEntity(medicationPlanService.insertIntoKeyStoreAndConvertToMap(new JSONObject(plan)), HttpStatus.OK);
+        return medicationPlanService.createPlan(plan);
     }
 
     @DeleteMapping("/delete_plan/{objectId}")
@@ -39,12 +41,12 @@ public class MedicationPlanController {
     }
 
     @PutMapping("/update_plan/{objectId}")
-    public ResponseEntity updatePlan(@PathVariable String objectId, @RequestBody String plan, @RequestHeader HttpHeaders httpHeaders) {
+    public ResponseEntity updatePlan(@PathVariable String objectId, @RequestBody String plan, @RequestHeader HttpHeaders httpHeaders) throws Exception {
         return medicationPlanService.updatePlan(objectId, plan, httpHeaders.getIfMatch());
     }
 
     @PatchMapping("/update_plan/{objectId}")
-    public ResponseEntity updatePlanFields(@PathVariable String objectId, @RequestBody String updatedFields, @RequestHeader HttpHeaders httpHeaders) {
+    public ResponseEntity updatePlanFields(@PathVariable String objectId, @RequestBody String updatedFields, @RequestHeader HttpHeaders httpHeaders) throws Exception {
         return medicationPlanService.updatePlanFields(objectId, updatedFields, httpHeaders.getIfMatch());
     }
 }
